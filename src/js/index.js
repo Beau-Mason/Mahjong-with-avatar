@@ -10,6 +10,8 @@
 const { hide, show, fadeIn, scale,
         setSelector, clearSelector  } = Majiang.UI.Util;
 
+const Wipe = require('./wipe');
+
 let loaded;
 
 $(function(){
@@ -45,8 +47,33 @@ $(function(){
     const rule = Majiang.rule(
                     JSON.parse(localStorage.getItem('Majiang.rule')||'{}'));
 
+    const wipe = new Wipe($('#wipe'));
+
+    // デバッグ用: 対局中に z=放銃 / x=被ツモ / c=和了 の演出を任意に出す
+    const DEBUG_KEYS = { z: 'houju', x: 'tsumora', c: 'win' };
+    $(window).on('keyup.wipedebug', (ev)=>{
+        const type = DEBUG_KEYS[ev.key];
+        if (type) wipe.react(type);
+    });
+
+    // 人間プレイヤーを拡張して放銃などを検知し、ワイプを反応させる
+    class HumanPlayer extends Majiang.UI.Player {
+        action_hule(hule) {
+            if (hule) { // ※ 流局時は action_pingju から引数なしで呼ばれるためガード
+                if (hule.baojia != null && hule.baojia === this._menfeng)
+                    wipe.react('houju');     // 自分の捨て牌に振り込んだ = 放銃
+                else if (hule.l === this._menfeng)
+                    wipe.react('win');       // 自分の和了
+                else if (hule.baojia == null)
+                    wipe.react('tsumora');   // 他家のツモ和了 = 被ツモ
+            }
+            super.action_hule(hule);
+        }
+    }
+
     function start() {
-        let players = [ new Majiang.UI.Player($('#board'), pai, audio) ];
+        wipe.start();    // クリック契機でカメラ許可を要求
+        let players = [ new HumanPlayer($('#board'), pai, audio) ];
         for (let i = 1; i < 4; i++) {
             players[i] = new Majiang.AI();
         }

@@ -1,0 +1,49 @@
+#wipe
+    position: fixed          // 盤面のスケールに影響されず画面隅に固定 = 枠の外
+    right: 16px
+    bottom: 16px
+    width: 180px
+    height: 135px
+    z-index: 10
+    border-radius: 8px
+    overflow: hidden
+    border: 3px solid rgba(255,255,255,0.6)
+    box-shadow: 0 4px 16px rgba(0,0,0,0.6)
+    background: #000
+    transition: border-color 0.15s
+    &.hide
+        display: none
+    video
+        width: 100%
+        height: 100%
+        object-fit: cover
+        transform: scaleX(-1)    // 鏡像（自分から見た自然な向き）
+    .bubble
+        position: absolute
+        left: 50%
+        top: 8px
+        transform: translateX(-50%) scale(0.6)
+        opacity: 0
+        padding: 4px 10px
+        border-radius: 12px
+        background: rgba(0,0,0,0.85)
+        color: white
+        font-family: text-font
+        white-space: nowrap
+        transition: opacity 0.15s, transform 0.15s
+        &.show
+            opacity: 1
+            transform: translateX(-50%) scale(1)
+    &.houju                       // 放銃: 赤フラッシュ
+        border-color: #f00
+        animation: wipe-flash 0.35s steps(1) 3
+    &.tsumora                     // 被ツモ: オレンジ
+        border-color: #fa0
+    &.win                         // 自分の和了: シアン
+        border-color: #0ff
+
+@keyframes wipe-flash
+    0%
+        border-color: #f00
+    50%
+        border-color: transparent
