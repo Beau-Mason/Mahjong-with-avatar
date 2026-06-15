@@ -17,8 +17,11 @@ module.exports = {
         paiga:     './src/js/paiga.js',
     },
     output: {
-        path:     __dirname + '/dist/js/',
-        filename: `[name]-${version}.js`
+        path:          __dirname + '/dist/js/',
+        filename:      `[name]-${version}.js`,
+        // avatar条件で動的importされるVRM/MediaPipeチャンク。dist/js/から読まれる。
+        chunkFilename: `[name]-${version}.js`,
+        publicPath:    'auto',      // 読み込み元<script>(dist/js/)を基準にチャンクを取得
     },
     optimization: {
         minimizer: [ new TerserPlugin({extractComments: false}) ],

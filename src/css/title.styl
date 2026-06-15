@@ -12,22 +12,21 @@ body.title
 
 #title
     display: none
-    margin: 40px auto
-    width: 640px
-    padding: 4px
-    border-radius: 5px
+    margin: 24px auto
+    width: 520px
+    padding: 12px
+    border-radius: 8px
     background: white
     color:      black
     text-align: center
     font-family: text-font
     h1
         margin: 0px
-        height: 150px
-        img
-            width: 600px
-    .version
-        font-family: defen-font
-        font-size: 24px
+        img                       // 新ロゴ(1536×1024)を枠幅いっぱいに、縦横比維持
+            width: 100%
+            height: auto
+            display: block
+            border-radius: 4px
     .loading
         margin: 8px auto
         color: #666
@@ -48,6 +47,26 @@ body.title
         &:focus
             background: #ccc
             outline: none
+    // タイトルからワイプ条件を選んで対局開始
+    .modes
+        margin: 16px auto
+        display: flex
+        justify-content: center
+        gap: 12px
+        .mode
+            font-family: text-font
+            width: 140px
+            padding: 10px 4px
+            border-radius: 4px
+            font-size: 16px
+            color: white
+            background: blue
+            cursor: pointer
+            &:hover
+            &:focus
+                background: #ccc
+                color: black
+                outline: none
     .login
         margin: 8px auto
         form

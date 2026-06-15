@@ -1,13 +1,17 @@
 #title
   h1
-    img(src="img/logo.png" alt="電脳麻将")
+    img(src="img/logo_new.png" alt="電脳麻将")
   if page == 'autoplay'
     div 自動対戦
   if page == 'netplay'
     div ネット対戦
-  .version ver. #{version}
   .loading Loading data...
   .start.hide(tabindex="0" role="button") START
+  if page == 'index'
+    .modes.hide
+      .mode(data-wipe="avatar" tabindex="0" role="button") アバタ対局
+      .mode(data-wipe="video"  tabindex="0" role="button") 実映像
+      .mode(data-wipe="none"   tabindex="0" role="button") 映像なし
   if page == 'netplay'
     .login.hide
       form.local(method="POST" action="server/auth/")

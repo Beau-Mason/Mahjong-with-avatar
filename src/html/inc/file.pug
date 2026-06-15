@@ -10,7 +10,11 @@
   .file.hide
 
     if page == 'index'
-      a.start 対局開始
+      a.start.hide 対局開始
+      .modes.hide
+        a.mode(data-wipe="avatar") アバタ対局
+        a.mode(data-wipe="video")  実映像
+        a.mode(data-wipe="none")   映像なし
     if page == 'netplay'
       .error.hide
       .netplay

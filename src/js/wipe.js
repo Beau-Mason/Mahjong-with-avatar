@@ -1,53 +1,92 @@
 "use strict";
-// 対局中、画面隅にWebカメラ映像を表示し、局の結果に応じて演出する
+// 画面隅のワイプ。実験条件(avatar/video/none)に応じて中身を出し分けるファクトリ。
+//
+// 条件の決め方・配信方法は ./wipe/condition.js を参照。
+// どの条件でも { start(), react(type) } の同一インターフェースを返すので、
+// 呼び出し側(index.js)は条件を意識しなくてよい。
 
-const REACTIONS = {
-    houju:   { text: 'Oh shit…', cls: 'houju',   sound: 'ohshit' }, // 放銃
-    tsumora: { text: 'うわ…',     cls: 'tsumora', sound: 'groan'  }, // 被ツモ
-    win:     { text: 'やった！',   cls: 'win',     sound: 'yatta'  }, // 自分の和了
-};
+const { condition, Logger } = require('./wipe/condition');
+const VideoWipe = require('./wipe/video');
+const NoneWipe  = require('./wipe/none');
 
-module.exports = class Wipe {
-    constructor(root) {
-        this._root   = $(root);
-        this._video  = this._root.find('video').get(0);
-        this._bubble = this._root.find('.bubble');
-        this._sound  = {
-            ohshit: new Audio('audio/ohshit.wav'),
-            groan:  new Audio('audio/groan.wav'),
-            yatta:  new Audio('audio/yatta.wav'),
-        };
-        this._timer = null;
+// avatar条件のときだけ AvatarWipe を生成する軽量ファサード。
+// 重い three.js / MediaPipe は start() 時に動的importで初めて読み込む
+// （= video/none の参加者には一切ダウンロードさせない）。
+class AvatarFacade {
+    constructor(root, cond) {
+        this._root  = $(root);
+        this._cond  = cond;
+        this._impl  = null;
+        this._queue = [];   // 初期化完了前に来たreactを保持
     }
-
-    // 対局開始のクリック（ユーザー操作）を契機にカメラ許可を求める
     async start() {
-        if (this._video.srcObject) return;          // 二重取得を防止
-        try {
-            const stream = await navigator.mediaDevices
-                                   .getUserMedia({ video: true, audio: false });
-            this._video.srcObject = stream;
-            await this._video.play();
+        if (this._impl || this._starting) {   // 再開時の二重初期化を防止
             this._root.removeClass('hide');
+            return;
+        }
+        this._starting = true;
+        this._root.removeClass('hide');
+        try {
+            const { AvatarWipe } = await import(
+                /* webpackChunkName: "avatar" */ './wipe/avatar');
+            this._impl = new AvatarWipe(this._root, this._cond);
+            await this._impl.start();
+            for (const t of this._queue) this._impl.react(t);
+            this._queue = [];
         } catch (e) {
-            console.warn('camera unavailable:', e);  // 拒否・カメラ無し → 出さない
+            console.error('avatar init failed; falling back to hidden wipe:', e);
             this._root.addClass('hide');
         }
     }
-
     react(type) {
-        const r = REACTIONS[type];
-        if (! r) return;
-        clearTimeout(this._timer);
-        this._root.removeClass('houju tsumora win').addClass(r.cls);
-        this._bubble.text(r.text).addClass('show');
-        const a = this._sound[r.sound];
-        if (a) { a.currentTime = 0; a.play().catch(()=>{}); }
-        else if (window.speechSynthesis)             // 効果音が無い場合の保険
-            speechSynthesis.speak(new SpeechSynthesisUtterance(r.text));
-        this._timer = setTimeout(()=>{
-            this._root.removeClass('houju tsumora win');
-            this._bubble.removeClass('show');
-        }, 2500);
+        if (this._impl) this._impl.react(type);
+        else this._queue.push(type);   // ロード中に和了等が来たら後追い再生
     }
+    dispose() {
+        if (this._impl && this._impl.dispose) this._impl.dispose();
+        this._impl = null;
+        this._starting = false;
+    }
+}
+
+function build(root, cond) {
+    if (cond.mode === 'none')   return new NoneWipe(root);
+    if (cond.mode === 'avatar') return new AvatarFacade(root, cond);
+    return new VideoWipe(root);   // 既定: video
+}
+
+// 公開API: createWipe(root, mode?) → { start(), react(type) }
+//   mode を渡すとURLより優先（タイトル画面での条件選択に使用）
+module.exports = function createWipe(root, mode) {
+    const cond   = condition(mode);
+    const logger = new Logger(cond);
+    const impl   = build(root, cond);
+    // 条件をCSSから参照できるよう<html>に付与（bodyのclassは対局開始で総入替されるため）
+    $(document.documentElement).addClass('wipe-' + cond.mode);
+    logger.event('session_start', {});
+
+    // react を包んで、演出と同時に実験ログを残す
+    return {
+        start: () => impl.start(),
+        react: (type) => { logger.event('reaction', { type }); impl.react(type); },
+        condition: cond,
+        log: (name, data) => logger.event(name, data),
+        // 条件を切り替える際の後始末（カメラ停止・canvas除去・状態リセット）
+        dispose: () => {
+            if (impl.dispose) impl.dispose();
+            $(document.documentElement).removeClass('wipe-' + cond.mode);
+            const $root = $(root);
+            $root.addClass('hide').removeClass('avatar houju tsumora win');
+            $root.find('.bubble').removeClass('show').text('');
+            $root.find('.avatar-canvas').remove();
+            const v = $root.find('video').get(0);
+            if (v) {
+                v.style.display = '';
+                if (v.srcObject) {
+                    v.srcObject.getTracks().forEach(t => t.stop());
+                    v.srcObject = null;
+                }
+            }
+        },
+    };
 };

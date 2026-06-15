@@ -18,6 +18,13 @@
         height: 100%
         object-fit: cover
         transform: scaleX(-1)    // 鏡像（自分から見た自然な向き）
+    // avatar条件: VRMを描くcanvasを枠いっぱいに敷く（videoは解析専用で非表示）
+    &.avatar
+        background: linear-gradient(160deg, #2a3550, #161b2c)
+        .avatar-canvas
+            width: 100%
+            height: 100%
+            display: block
     .bubble
         position: absolute
         left: 50%
@@ -47,3 +54,19 @@
         border-color: #f00
     50%
         border-color: transparent
+
+// 実験(avatar/video)条件かつ十分広い画面では、盤面(800px)を左に寄せ、
+// 空いた右カラムいっぱいにワイプを拡大する。
+@media screen and (min-width: 1100px)
+    html.wipe-avatar
+    html.wipe-video
+        body.board > #board
+            margin-left: 24px       // 左端に少し余白
+            margin-right: 0
+        #wipe
+            left: 840px             // 24(左余白) + 800(盤面) + 16(間隔)
+            right: 16px
+            top: 16px
+            bottom: 16px
+            width: auto             // 上下左右の固定で右カラムを満たす
+            height: auto
